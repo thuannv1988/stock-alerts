@@ -65,7 +65,7 @@ ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 # CONFIG (same values/logic as the desktop version)
 # --------------------------------------------------------------------------
 
-DEFAULT_WATCHLIST = ["NOW", "CRM", "ORCL", "NFLX","NVO" "NKE","ADBE", "BULL", "HOOD", "BBAI"]   # Nike's actual ticker is NKE
+DEFAULT_WATCHLIST = ["NOW", "CRM", "ORCL", "NFLX", "NVO", "NKE","ADBE", "BULL", "HOOD", "BBAI"]   # Nike's actual ticker is NKE
 
 EMA_PERIODS = [10, 50, 100, 150, 200]
 
