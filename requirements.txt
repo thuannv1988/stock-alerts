@@ -1,0 +1,8 @@
+yfinance>=0.2.40
+pandas>=2.0.0
+flask>=3.0.0
+gunicorn>=21.2.0
+
+# Note: tkinter (used by stock_alerts_gui.py) ships built into standard
+# Python installers on Windows/Mac and does not need to be pip-installed.
+# On some Linux distros you may need: sudo apt install python3-tk
