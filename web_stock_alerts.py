@@ -65,7 +65,7 @@ ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
 # CONFIG (same values/logic as the desktop version)
 # --------------------------------------------------------------------------
 
-DEFAULT_WATCHLIST = ["NOW", "CRM", "ORCL", "NFLX", "NVO", "NKE","ADBE", "BULL", "HOOD", "BBAI"]   # Nike's actual ticker is NKE
+DEFAULT_WATCHLIST = ["NOW", "CRM", "NKE"]   # Nike's actual ticker is NKE
 
 EMA_PERIODS = [10, 50, 100, 150, 200]
 
@@ -392,6 +392,14 @@ PAGE_TEMPLATE = """
   .tf-btn { background: #fff; border: 1px solid #999; min-width: 52px; font-weight: 600; }
   .tf-btn.active { background: #1565c0; color: white; border-color: #1565c0; }
   .tf-btn.active:hover { background: #1257a8; }
+  .tab-btn { background: #eee; border: 1px solid #999; font-weight: 600; padding: 8px 16px;
+             border-radius: 6px 6px 0 0; }
+  .tab-btn.active { background: #0d47a1; color: white; border-color: #0d47a1; }
+  .tab-add-btn { background: #fff; color: #1565c0; border-style: dashed; }
+  .tab-icon { cursor: pointer; font-size: 13px; margin-left: 2px; color: #444; }
+  .tab-icon:hover { color: #000; }
+  .tab-icon-danger { color: #c62828; }
+  .tab-icon-danger:hover { color: #900; }
   table { border-collapse: collapse; width: 100%; background: white; font-size: 13px; }
   th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: center; white-space: nowrap; }
   th { background: #1565c0; color: white; }
@@ -410,6 +418,8 @@ PAGE_TEMPLATE = """
 <h1>Stock Alert Dashboard - MACD &amp; EMA
   <a href="/logout" style="font-size:13px; font-weight:normal; color:#c62828; margin-left:16px; text-decoration:underline;">Log out</a>
 </h1>
+
+<div id="tabsBar" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:14px;"></div>
 
 <div class="controls">
   <span>Timeframe:</span>
@@ -456,7 +466,43 @@ PAGE_TEMPLATE = """
 
 <script>
 const COLUMNS = {{ columns_json | safe }};
-let watchlist = {{ watchlist_json | safe }};
+const DEFAULT_WATCHLIST = {{ watchlist_json | safe }};
+const WORKSPACES_STORAGE_KEY = 'stockAlerts_workspaces';
+
+// A "workspace" is one tab: {id, name, watchlist: [tickers]}. Each tab has
+// its own independently saved watchlist, all stored together in this
+// browser's local storage.
+function loadWorkspaces() {
+  try {
+    const saved = localStorage.getItem(WORKSPACES_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (err) {
+    console.warn('Could not read saved tabs, starting fresh.', err);
+  }
+  return [{id: 'ws-default', name: 'My Stocks', watchlist: [...DEFAULT_WATCHLIST]}];
+}
+
+function saveWorkspaces() {
+  // keep the active workspace's stored watchlist in sync with the live array
+  const active = getActiveWorkspace();
+  if (active) active.watchlist = watchlist;
+  try {
+    localStorage.setItem(WORKSPACES_STORAGE_KEY, JSON.stringify(workspaces));
+  } catch (err) {
+    console.warn('Could not save tabs to this browser.', err);
+  }
+}
+
+function getActiveWorkspace() {
+  return workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0];
+}
+
+let workspaces = loadWorkspaces();
+let activeWorkspaceId = workspaces[0].id;
+let watchlist = getActiveWorkspace().watchlist;
 let currentTimeframe = '1 Day';
 
 function selectTimeframe(tf) {
@@ -467,26 +513,122 @@ function selectTimeframe(tf) {
   runScan();
 }
 
+function renderTabsBar() {
+  const bar = document.getElementById('tabsBar');
+  bar.innerHTML = '';
+  workspaces.forEach(ws => {
+    const wrap = document.createElement('span');
+    wrap.style.display = 'inline-flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.marginRight = '6px';
+
+    const btn = document.createElement('button');
+    btn.textContent = ws.name;
+    btn.className = 'tab-btn' + (ws.id === activeWorkspaceId ? ' active' : '');
+    btn.onclick = () => selectWorkspace(ws.id);
+    wrap.appendChild(btn);
+
+    if (ws.id === activeWorkspaceId) {
+      const renameIcon = document.createElement('span');
+      renameIcon.textContent = ' \u270E';
+      renameIcon.title = 'Rename this tab';
+      renameIcon.className = 'tab-icon';
+      renameIcon.onclick = () => renameWorkspace(ws.id);
+      wrap.appendChild(renameIcon);
+
+      if (workspaces.length > 1) {
+        const delIcon = document.createElement('span');
+        delIcon.textContent = ' \u2715';
+        delIcon.title = 'Delete this tab';
+        delIcon.className = 'tab-icon tab-icon-danger';
+        delIcon.onclick = () => deleteWorkspace(ws.id);
+        wrap.appendChild(delIcon);
+      }
+    }
+    bar.appendChild(wrap);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '+ Add Tab';
+  addBtn.className = 'tab-btn tab-add-btn';
+  addBtn.onclick = addWorkspace;
+  bar.appendChild(addBtn);
+}
+
+function selectWorkspace(id) {
+  if (id === activeWorkspaceId) return;
+  saveWorkspaces();  // persist any pending changes on the tab we're leaving
+  activeWorkspaceId = id;
+  watchlist = getActiveWorkspace().watchlist;
+  renderTabsBar();
+  renderWatchlistBar();
+  document.getElementById('resultsBody').innerHTML = '';
+  document.getElementById('status').textContent = 'Switched to "' + getActiveWorkspace().name + '" - click Run to scan.';
+}
+
+function addWorkspace() {
+  const name = prompt('Name for the new tab (e.g. "Wife\'s Stocks"):', 'New Watchlist');
+  if (!name || !name.trim()) return;
+  const newWs = {id: 'ws-' + Date.now(), name: name.trim(), watchlist: []};
+  workspaces.push(newWs);
+  activeWorkspaceId = newWs.id;
+  watchlist = newWs.watchlist;
+  saveWorkspaces();
+  renderTabsBar();
+  renderWatchlistBar();
+  document.getElementById('resultsBody').innerHTML = '';
+  document.getElementById('status').textContent = 'Created tab "' + newWs.name + '" - add some tickers, then click Run.';
+}
+
+function renameWorkspace(id) {
+  const ws = workspaces.find(w => w.id === id);
+  if (!ws) return;
+  const newName = prompt('Rename this tab:', ws.name);
+  if (!newName || !newName.trim()) return;
+  ws.name = newName.trim();
+  saveWorkspaces();
+  renderTabsBar();
+}
+
+function deleteWorkspace(id) {
+  if (workspaces.length <= 1) { alert('You need at least one tab.'); return; }
+  const ws = workspaces.find(w => w.id === id);
+  if (!ws) return;
+  if (!confirm('Delete tab "' + ws.name + '" and its watchlist? This cannot be undone.')) return;
+  workspaces = workspaces.filter(w => w.id !== id);
+  if (activeWorkspaceId === id) {
+    activeWorkspaceId = workspaces[0].id;
+    watchlist = workspaces[0].watchlist;
+  }
+  saveWorkspaces();
+  renderTabsBar();
+  renderWatchlistBar();
+  document.getElementById('resultsBody').innerHTML = '';
+}
+
 function renderWatchlistBar() {
   const bar = document.getElementById('watchlistBar');
   bar.innerHTML = 'Watchlist: ' + watchlist.map(t =>
     `<span>${t}<span class="remove-btn" onclick="removeTicker('${t}')"> &times;</span></span>`
-  ).join('  |  ');
+  ).join('  |  ')
+    + (watchlist.length ? '' : '<span style="color:#888;">(empty - add a ticker below)</span>');
 }
 
 function addTicker() {
   const input = document.getElementById('tickerInput');
   const symbol = input.value.trim().toUpperCase();
   if (!symbol) return;
-  if (watchlist.includes(symbol)) { alert(symbol + ' is already on the watchlist.'); return; }
+  if (watchlist.includes(symbol)) { alert(symbol + ' is already on this tab\'s watchlist.'); return; }
   watchlist.push(symbol);
   input.value = '';
   renderWatchlistBar();
+  saveWorkspaces();
 }
 
 function removeTicker(symbol) {
   watchlist = watchlist.filter(t => t !== symbol);
   renderWatchlistBar();
+  saveWorkspaces();
   const row = document.getElementById('row-' + symbol);
   if (row) row.remove();
 }
@@ -572,6 +714,7 @@ function renderResults(results) {
   });
 }
 
+renderTabsBar();
 renderWatchlistBar();
 </script>
 
