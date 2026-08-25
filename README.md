@@ -61,29 +61,7 @@ python web_stock_alerts.py
 
 ---
 
-## 3. Multiple tabs (e.g. separate watchlists for you and your spouse)
-
-You can create separate named tabs, each with its own independent
-watchlist — handy for keeping your stocks and someone else's stocks apart
-on the same dashboard.
-
-- Click **+ Add Tab** to create a new one; you'll be asked to name it
-  (e.g. "Wife's Stocks").
-- Click a tab to switch to it — its own watchlist and results show up.
-- While a tab is active, click the pencil (✎) next to its name to rename
-  it, or the ✕ to delete it (you always need at least one tab).
-- Each tab's watchlist is saved in this browser's local storage, tied to
-  that tab's name — so switching tabs, logging out, or closing the
-  browser doesn't lose anything.
-
-Note: like the watchlist itself, tabs are saved per-browser/per-device,
-not synced across devices — if you check the site from a different
-computer or phone, you'll see fresh default tabs there, not the ones from
-this browser.
-
----
-
-## 4. Deployed on Render (free)
+## 3. Deployed on Render (free)
 
 This app is set up to deploy on Render's free web service tier:
 
@@ -108,7 +86,7 @@ you buy it from, e.g. Namecheap, GoDaddy).
 
 ---
 
-## 5. Command-line version: `stock_alerts.py`
+## 4. Command-line version: `stock_alerts.py`
 
 A simpler, no-browser alternative that prints a text report:
 ```bash
@@ -117,7 +95,7 @@ python stock_alerts.py AAPL NVDA
 
 ---
 
-## 6. Desktop GUI alternative: `gui_stock_alerts.py`
+## 5. Desktop GUI alternative: `gui_stock_alerts.py`
 
 A Tkinter desktop-window version with the same layout as the web
 dashboard. Requires a working Tcl/Tk installation bundled with Python —
