@@ -500,10 +500,37 @@ function getActiveWorkspace() {
   return workspaces.find(w => w.id === activeWorkspaceId) || workspaces[0];
 }
 
+const RESULTS_CACHE_STORAGE_KEY = 'stockAlerts_resultsCache';
+
+// Loads the last-scan cache (per tab) from this browser's local storage,
+// so a page refresh still shows your most recent numbers instead of a
+// blank table - you'll still see a timestamp so it's clear how fresh it is.
+function loadResultsCache() {
+  try {
+    const saved = localStorage.getItem(RESULTS_CACHE_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (err) {
+    console.warn('Could not read saved scan results, starting fresh.', err);
+  }
+  return {};
+}
+
+function saveResultsCache() {
+  try {
+    localStorage.setItem(RESULTS_CACHE_STORAGE_KEY, JSON.stringify(resultsCache));
+  } catch (err) {
+    console.warn('Could not save scan results to this browser.', err);
+  }
+}
+
 let workspaces = loadWorkspaces();
 let activeWorkspaceId = workspaces[0].id;
 let watchlist = getActiveWorkspace().watchlist;
 let currentTimeframe = '1 Day';
+let resultsCache = loadResultsCache();  // workspaceId -> {results, statusText} from its last scan
 
 function selectTimeframe(tf) {
   currentTimeframe = tf;
@@ -562,8 +589,15 @@ function selectWorkspace(id) {
   watchlist = getActiveWorkspace().watchlist;
   renderTabsBar();
   renderWatchlistBar();
-  document.getElementById('resultsBody').innerHTML = '';
-  document.getElementById('status').textContent = 'Switched to "' + getActiveWorkspace().name + '" - click Run to scan.';
+
+  const cached = resultsCache[id];
+  if (cached) {
+    renderResults(cached.results);
+    document.getElementById('status').textContent = cached.statusText + '  (showing last scan for "' + getActiveWorkspace().name + '" - click Run to refresh)';
+  } else {
+    document.getElementById('resultsBody').innerHTML = '';
+    document.getElementById('status').textContent = 'Switched to "' + getActiveWorkspace().name + '" - click Run to scan.';
+  }
 }
 
 function addWorkspace() {
@@ -602,6 +636,8 @@ function deleteWorkspace(id) {
     return;
   }
   workspaces = workspaces.filter(w => w.id !== id);
+  delete resultsCache[id];
+  saveResultsCache();
   if (activeWorkspaceId === id) {
     activeWorkspaceId = workspaces[0].id;
     watchlist = workspaces[0].watchlist;
@@ -609,7 +645,13 @@ function deleteWorkspace(id) {
   saveWorkspaces();
   renderTabsBar();
   renderWatchlistBar();
-  document.getElementById('resultsBody').innerHTML = '';
+  const cached = resultsCache[activeWorkspaceId];
+  if (cached) {
+    renderResults(cached.results);
+    document.getElementById('status').textContent = cached.statusText + '  (showing last scan for "' + getActiveWorkspace().name + '" - click Run to refresh)';
+  } else {
+    document.getElementById('resultsBody').innerHTML = '';
+  }
 }
 
 function renderWatchlistBar() {
@@ -674,6 +716,7 @@ async function runScan() {
   const runBtn = document.getElementById('runBtn');
   const status = document.getElementById('status');
   const timeframe = currentTimeframe;
+  const scanForWorkspaceId = activeWorkspaceId;  // remember which tab this scan is for
 
   runBtn.disabled = true;
   status.textContent = 'Running scan (' + timeframe + ')...';
@@ -685,10 +728,24 @@ async function runScan() {
       body: JSON.stringify({tickers: watchlist, timeframe: timeframe})
     });
     const data = await resp.json();
-    renderResults(data.results);
-    status.textContent = 'Scan complete - ' + new Date().toLocaleString();
+    const statusText = 'Scan complete - ' + new Date().toLocaleString();
+
+    // Cache these results against the tab they belong to, so switching
+    // tabs later - or reloading the page entirely - can restore them
+    // instantly without re-scanning.
+    resultsCache[scanForWorkspaceId] = {results: data.results, statusText: statusText};
+    saveResultsCache();
+
+    // Only update the visible table if the user is still on that same tab
+    // (they might have switched away while the scan was in flight).
+    if (activeWorkspaceId === scanForWorkspaceId) {
+      renderResults(data.results);
+      status.textContent = statusText;
+    }
   } catch (err) {
-    status.textContent = 'Error running scan: ' + err;
+    if (activeWorkspaceId === scanForWorkspaceId) {
+      status.textContent = 'Error running scan: ' + err;
+    }
   } finally {
     runBtn.disabled = false;
   }
@@ -722,6 +779,12 @@ function renderResults(results) {
 
 renderTabsBar();
 renderWatchlistBar();
+
+const initialCached = resultsCache[activeWorkspaceId];
+if (initialCached) {
+  renderResults(initialCached.results);
+  document.getElementById('status').textContent = initialCached.statusText + '  (showing last scan for "' + getActiveWorkspace().name + '" - click Run to refresh)';
+}
 </script>
 
 </body>
