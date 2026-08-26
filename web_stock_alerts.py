@@ -416,6 +416,7 @@ PAGE_TEMPLATE = """
 <body>
 
 <h1>Stock Alert Dashboard - MACD &amp; EMA
+  <a href="/education" style="font-size:13px; font-weight:normal; color:#1565c0; margin-left:16px; text-decoration:underline;">📚 Education</a>
   <a href="/logout" style="font-size:13px; font-weight:normal; color:#c62828; margin-left:16px; text-decoration:underline;">Log out</a>
 </h1>
 
@@ -790,6 +791,146 @@ if (initialCached) {
 </body>
 </html>
 """
+
+
+EDUCATION_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Education - MACD &amp; EMA Basics</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #fafafa; color: #222; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 24px 28px 60px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin-top: 34px; color: #0d47a1; border-bottom: 2px solid #e3ecf7; padding-bottom: 6px; }
+  h3 { font-size: 15px; margin-top: 20px; color: #1565c0; }
+  p, li { line-height: 1.6; font-size: 14.5px; }
+  .top-nav { margin-bottom: 18px; }
+  .top-nav a { color: #1565c0; text-decoration: underline; font-size: 13px; }
+  .disclaimer { background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px; padding: 14px 16px;
+                font-size: 13px; color: #6b5400; margin: 18px 0; }
+  .example-box { background: #eef4fc; border-left: 4px solid #1565c0; padding: 10px 16px; margin: 14px 0;
+                 border-radius: 0 6px 6px 0; }
+  .caution-box { background: #fdecea; border-left: 4px solid #c62828; padding: 10px 16px; margin: 14px 0;
+                 border-radius: 0 6px 6px 0; }
+  code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  ul { padding-left: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="top-nav"><a href="/">← Back to Dashboard</a></div>
+
+<h1>Understanding MACD &amp; EMA Signals</h1>
+<p style="color:#666; margin-top:0;">A plain-language reference for reading the indicators on your dashboard.</p>
+
+<div class="disclaimer">
+<strong>This is general, educational information only — not financial advice.</strong>
+It explains what these indicators traditionally mean and how traders commonly use them.
+It is not a recommendation to buy or sell any specific stock, and it can't account for your
+personal financial situation, risk tolerance, or goals. Markets can move against any signal,
+including the ones described below.
+</div>
+
+<h2>What MACD Actually Measures</h2>
+<p>
+MACD stands for <strong>Moving Average Convergence Divergence</strong>. It compares two EMAs of price
+(typically a faster 12-period EMA and a slower 26-period EMA) to gauge momentum — is the recent trend
+speeding up, slowing down, or reversing?
+</p>
+<ul>
+  <li><strong>MACD line</strong> = fast EMA minus slow EMA. Positive means the fast average is above the
+      slow average (upward momentum); negative means the opposite.</li>
+  <li><strong>Signal line</strong> = a 9-period EMA of the MACD line itself — a smoothed version used for
+      comparison.</li>
+  <li><strong>Histogram</strong> = MACD line minus signal line. It visualizes the gap between the two —
+      growing bars mean the gap is widening, shrinking bars mean it's narrowing (often the first hint a
+      crossover may be near).</li>
+</ul>
+
+<h2>Reading a MACD Crossover</h2>
+<h3>Bullish crossover (often watched as a potential ENTRY signal)</h3>
+<p>
+This happens when the MACD line crosses <em>above</em> the signal line. It suggests upward momentum is
+gaining strength relative to the recent trend. On your dashboard, this shows up as the histogram flipping
+from negative to positive.
+</p>
+<div class="example-box">
+Example: MACD was below the signal line for several days (histogram negative, shown in red), then the gap
+narrows and MACD crosses above the signal line (histogram flips to positive/green). Some traders treat this
+as a cue to consider entering a long position.
+</div>
+
+<h3>Bearish crossover (often watched as a potential EXIT signal)</h3>
+<p>
+This happens when the MACD line crosses <em>below</em> the signal line — upward momentum weakening or
+reversing. On your dashboard, the histogram flips from positive to negative.
+</p>
+<div class="example-box">
+Example: histogram bars have been shrinking while still positive (green, but getting smaller each bar) —
+this is what your dashboard flags as "MACD gap narrowing," a heads-up that a bearish crossover may be
+approaching. Some traders use this as a cue to consider trimming or exiting a position, even before the
+actual crossover confirms.
+</div>
+
+<h2>Using EMAs to Confirm the Signal</h2>
+<p>
+MACD crossovers happen often, and not every one leads to a sustained move — this is why many traders don't
+act on MACD alone. A common approach is to only trust a MACD signal when it agrees with the broader trend,
+which is where EMA10/50/100/150/200 come in:
+</p>
+<ul>
+  <li><strong>Price above the longer EMAs (150/200)</strong> generally suggests a broader uptrend — a
+      bullish MACD crossover in this context is often considered a higher-quality entry signal than the
+      same crossover happening while price is below those EMAs.</li>
+  <li><strong>Price below the longer EMAs</strong> generally suggests a broader downtrend — a bearish MACD
+      crossover here may carry more weight as an exit/avoid-entry signal.</li>
+  <li><strong>Shorter EMAs (10/50) crossing the longer ones</strong> (e.g. EMA10 crossing above EMA50) is
+      itself a separate trend-change signal some traders use alongside MACD for extra confirmation, rather
+      than relying on either indicator alone.</li>
+</ul>
+<div class="example-box">
+Putting it together: a bullish MACD crossover <em>while price is also above EMA150 and EMA200</em> is a
+combination some traders see as a stronger case for an entry than a bullish crossover happening in a
+downtrend (price below those EMAs) — the latter might just be a brief bounce rather than a real reversal.
+</div>
+
+<h2>Important Caveats</h2>
+<div class="caution-box">
+<ul style="margin:0;">
+  <li><strong>MACD is a lagging indicator</strong> — it's built from moving averages of past prices, so by
+      definition it confirms a move after it's already begun, not before.</li>
+  <li><strong>False signals ("whipsaws") are common in sideways/choppy markets</strong> — MACD can cross
+      back and forth repeatedly without any real trend developing, generating misleading signals.</li>
+  <li><strong>No indicator works in isolation</strong> — volume, overall market conditions, news, and
+      broader risk management (like position sizing and stop-losses) all matter alongside any technical
+      signal.</li>
+  <li><strong>Past patterns don't guarantee future results</strong> — this applies to every technical
+      indicator, not just MACD.</li>
+</ul>
+</div>
+
+<h2>How This Maps to Your Dashboard</h2>
+<p>
+On the main dashboard, each ticker's <strong>Bullish/Bearish</strong> column reflects the current MACD
+line vs. signal line position, and the <strong>Comments</strong> column flags when a crossover looks close
+(histogram shrinking and small relative to its recent average) or when price is near a specific EMA. Cells
+turn red when they're part of what triggered a flagged comment, so you can see at a glance which numbers
+are driving the alert.
+</p>
+
+</div>
+</body>
+</html>
+"""
+
+
+@app.route("/education")
+@login_required
+def education():
+    return render_template_string(EDUCATION_TEMPLATE)
 
 
 @app.route("/")
