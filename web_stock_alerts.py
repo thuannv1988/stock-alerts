@@ -440,6 +440,7 @@ PAGE_TEMPLATE = """
   tr.flagged { background: #d9f2d9; }
   tr.error { background: #f7d6d6; }
   td.cell-flag { color: #c62828; font-weight: 700; }
+  #resultsTable.ema-hidden .col-ema { display: none; }
   td.comments, th.comments { white-space: normal; text-align: left; max-width: 320px; }
   .remove-btn { color: #a33; cursor: pointer; font-weight: bold; margin-left: 6px; }
   #status { margin-top: 10px; color: #555; font-size: 13px; }
@@ -466,6 +467,8 @@ PAGE_TEMPLATE = """
 
   <button id="runBtn" onclick="runScan()" style="margin-left:16px;">Run</button>
 
+  <button id="toggleEmaBtn" onclick="toggleEmaColumns()" style="margin-left:16px;">Show EMA Columns</button>
+
   <label for="tickerInput" style="margin-left:16px;">Add ticker:</label>
   <input type="text" id="tickerInput" placeholder="e.g. AAPL" onkeydown="if(event.key==='Enter') addTicker();">
   <button onclick="addTicker()">Add</button>
@@ -479,15 +482,15 @@ PAGE_TEMPLATE = """
     <tr>
       <th rowspan="2">Ticker</th>
       <th rowspan="2">Price</th>
-      <th class="group-header" colspan="10">EMA Indicator</th>
+      <th class="group-header col-ema" colspan="10">EMA Indicator</th>
       <th class="group-header" colspan="6">MACD Indicator</th>
     </tr>
     <tr>
-      <th>EMA10</th><th>Delta %</th>
-      <th>EMA50</th><th>Delta %</th>
-      <th>EMA100</th><th>Delta %</th>
-      <th>EMA150</th><th>Delta %</th>
-      <th>EMA200</th><th>Delta %</th>
+      <th class="col-ema">EMA10</th><th class="col-ema">Delta %</th>
+      <th class="col-ema">EMA50</th><th class="col-ema">Delta %</th>
+      <th class="col-ema">EMA100</th><th class="col-ema">Delta %</th>
+      <th class="col-ema">EMA150</th><th class="col-ema">Delta %</th>
+      <th class="col-ema">EMA200</th><th class="col-ema">Delta %</th>
       <th>MACD</th><th>Signal</th><th>Hist</th>
       <th>Bullish/Bearish</th><th title="Always based on the 4-Hour MACD crossover, regardless of the timeframe selected above. BUY = MACD just crossed above signal on the latest 4h bar. SELL = MACD just crossed below. &#8722; = no fresh crossover right now." style="cursor:help; border-bottom:1px dotted #fff;">Action &#9432;</th><th class="comments">Comments</th>
     </tr>
@@ -715,10 +718,13 @@ function removeTicker(symbol) {
   if (row) row.remove();
 }
 
-function cell(text, isFlagged) {
+const EMA_COL_IDS = ['ema10', 'd10', 'ema50', 'd50', 'ema100', 'd100', 'ema150', 'd150', 'ema200', 'd200'];
+
+function cell(text, isFlagged, colId) {
   const td = document.createElement('td');
   td.textContent = text;
   if (isFlagged) td.classList.add('cell-flag');
+  if (colId && EMA_COL_IDS.includes(colId)) td.classList.add('col-ema');
   return td;
 }
 
@@ -812,7 +818,7 @@ function renderResults(results) {
     if (r.error) {
       tr.classList.add('error');
       tr.appendChild(tickerCell(r.ticker));
-      for (let i = 1; i < COLUMNS.length - 1; i++) tr.appendChild(cell('ERR'));
+      for (let i = 1; i < COLUMNS.length - 1; i++) tr.appendChild(cell('ERR', false, COLUMNS[i][0]));
       tr.appendChild(cell(r.error));
     } else {
       if (r.flagged) tr.classList.add('flagged');
@@ -823,7 +829,7 @@ function renderResults(results) {
         } else if (colId === 'action') {
           tr.appendChild(actionCell(r[colId] !== undefined ? r[colId] : '-'));
         } else {
-          tr.appendChild(cell(r[colId] !== undefined ? r[colId] : '-', nearCols.includes(colId)));
+          tr.appendChild(cell(r[colId] !== undefined ? r[colId] : '-', nearCols.includes(colId), colId));
         }
       });
     }
@@ -831,8 +837,38 @@ function renderResults(results) {
   });
 }
 
+const EMA_VISIBILITY_STORAGE_KEY = 'stockAlerts_showEmaColumns';
+
+function loadEmaVisibility() {
+  try {
+    const saved = localStorage.getItem(EMA_VISIBILITY_STORAGE_KEY);
+    if (saved !== null) return saved === 'true';
+  } catch (err) { /* ignore, use default below */ }
+  return false;  // default: EMA columns hidden, only MACD indicator shown
+}
+
+let showEmaColumns = loadEmaVisibility();
+
+function applyEmaVisibility() {
+  const table = document.getElementById('resultsTable');
+  table.classList.toggle('ema-hidden', !showEmaColumns);
+  const btn = document.getElementById('toggleEmaBtn');
+  if (btn) btn.textContent = showEmaColumns ? 'Hide EMA Columns' : 'Show EMA Columns';
+}
+
+function toggleEmaColumns() {
+  showEmaColumns = !showEmaColumns;
+  try {
+    localStorage.setItem(EMA_VISIBILITY_STORAGE_KEY, String(showEmaColumns));
+  } catch (err) {
+    console.warn('Could not save EMA column preference in this browser.', err);
+  }
+  applyEmaVisibility();
+}
+
 renderTabsBar();
 renderWatchlistBar();
+applyEmaVisibility();
 
 const initialCached = resultsCache[activeWorkspaceId];
 if (initialCached) {
